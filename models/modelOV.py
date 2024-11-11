@@ -2,7 +2,7 @@ from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 
 device = "GPU"
 ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
-model_path = "models/ovmodels/Mistral-7B-Instruct-v0.3-ov-int4"
+model_path = "models/ovmodels/phi-3-mini-instruct"
 
 # Create the HuggingFacePipeline
 ov_llm = HuggingFacePipeline.from_model_id(
