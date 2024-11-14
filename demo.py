@@ -1,5 +1,3 @@
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 import os
 
@@ -7,7 +5,7 @@ load_dotenv()
 backend = os.getenv("BACKEND")
 
 if backend == "openvino":
-  from models.modelOV import ov_llm
+  from models.modelOV import llm
 elif backend == "cuda" or backend == "cpu":
   raise NotImplementedError("This backend is not supported yet.")
 else:
@@ -22,7 +20,7 @@ def chatbot(message, history):
     "Return a JSON object with an `answer` key that answers the following question: {messages}"
   )
 
-  chain = prompt | ov_llm
+  chain = prompt | llm
 
   json_parser = SimpleJsonOutputParser()
   response = chain.invoke({"messages": message })

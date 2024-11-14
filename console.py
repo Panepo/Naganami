@@ -1,19 +1,19 @@
 from dotenv import load_dotenv
 import os
-import time
 
 load_dotenv()
 backend = os.getenv("BACKEND")
 
 if backend == "openvino":
-  from models.modelOV import ov_llm
+  from models.modelOV import llm
 elif backend == "cuda" or backend == "cpu":
-  raise NotImplementedError("This backend is not supported yet.")
+  from models.modelHF import llm
+elif backend == "ollama":
+  from models.modelOllama import llm
 else:
   raise ValueError(f"Unknown backend: {backend}")
 
-config = {"configurable": {"thread_id": "abc345"}}
-
+import time
 from langchain_core.prompts import PromptTemplate
 from langchain.output_parsers.json import SimpleJsonOutputParser
 
@@ -22,7 +22,7 @@ prompt = PromptTemplate.from_template(
 )
 
 # Create LLM Chain
-chain = prompt | ov_llm
+chain = prompt | llm
 
 json_parser = SimpleJsonOutputParser()
 
