@@ -1,3 +1,12 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+backend = os.getenv("BACKEND")
+
+if backend == "openvino":
+  raise ValueError(f"openvino backend is not working in this version")
+
 import gradio as gr
 from agent import app
 from langchain_core.messages import HumanMessage
