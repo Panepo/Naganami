@@ -11,9 +11,77 @@ import gradio as gr
 from agent import app
 from langchain_core.messages import HumanMessage
 
-def gradio_interface(user_input):
-    final_state = app.invoke({"messages": [HumanMessage(content=user_input)]}, config={"configurable": {"thread_id": 42}})
-    return final_state["messages"][-1].content
+def partial_text_processor(partial_text, new_text):
+  partial_text += new_text
+  return partial_text
 
-iface = gr.Interface(fn=gradio_interface, inputs="text", outputs="text")
-iface.launch()
+def user(message, history):
+  return "", history + [[message, ""]]
+
+def bot(history):
+  response = app.invoke({"messages": [HumanMessage(content=history[-1][0])]}, config={"configurable": {"thread_id": 42}})
+  partial_text = ""
+  partial_text = partial_text_processor(partial_text, response["messages"][-1].content)
+  history[-1][1] = partial_text
+  yield history
+
+def request_cancel():
+  app.cancel()
+
+with gr.Blocks(
+  theme=gr.themes.Citrus(),
+  css=".disclaimer {font-variant-caps: all-small-caps;}",
+) as demo:
+  gr.Markdown(f"""<h1><center>Getac Agent</center></h1>""")
+  chatbot = gr.Chatbot(height=500)
+  with gr.Row():
+    with gr.Column():
+      msg = gr.Textbox(
+        label="Chat Message Box",
+        placeholder="Chat Message Box",
+        show_label=False,
+        container=False,
+      )
+    with gr.Column():
+      with gr.Row():
+        submit = gr.Button("Submit")
+        stop = gr.Button("Stop")
+        clear = gr.Button("Clear")
+
+  submit_event = msg.submit(
+    fn=user,
+    inputs=[msg, chatbot],
+    outputs=[msg, chatbot],
+    queue=False,
+  ).then(
+    fn=bot,
+    inputs=[
+        chatbot,
+    ],
+    outputs=chatbot,
+    queue=True,
+  )
+  submit_click_event = submit.click(
+    fn=user,
+    inputs=[msg, chatbot],
+    outputs=[msg, chatbot],
+    queue=False,
+  ).then(
+    fn=bot,
+    inputs=[
+        chatbot,
+    ],
+    outputs=chatbot,
+    queue=True,
+  )
+  stop.click(
+    fn=request_cancel,
+    inputs=None,
+    outputs=None,
+    cancels=[submit_event, submit_click_event],
+    queue=False,
+  )
+  clear.click(lambda: None, None, chatbot, queue=False)
+
+if __name__ == "__main__":
+  demo.launch()
