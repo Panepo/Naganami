@@ -18,12 +18,19 @@ def partial_text_processor(partial_text, new_text):
 def user(message, history):
   return "", history + [[message, ""]]
 
-def bot(history):
+async def bot(history):
   response = app.invoke({"messages": [HumanMessage(content=history[-1][0])]}, config={"configurable": {"thread_id": 42}})
   partial_text = ""
   partial_text = partial_text_processor(partial_text, response["messages"][-1].content)
   history[-1][1] = partial_text
   yield history
+
+  #partial_text = ""
+  #async for event in app.astream_events({"messages": [HumanMessage(content=history[-1][0])]}, config={"configurable": {"thread_id": 42}}, version="v1"):
+  #  if "message" in event.keys():
+  #    partial_text = partial_text_processor(partial_text, event.data["message"].content)
+  #    history[-1][1] = partial_text
+  #    yield history
 
 def request_cancel():
   app.cancel()

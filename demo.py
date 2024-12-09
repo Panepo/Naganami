@@ -4,19 +4,26 @@ import os
 load_dotenv()
 backend = os.getenv("BACKEND")
 
-if backend == "openvino":
-  from models.modelOV import llm
-elif backend == "cuda" or backend == "cpu":
-  raise NotImplementedError("This backend is not supported yet.")
+if backend == "cuda" or backend == "cpu":
+  from llm_hf import llm, generation_kwargs
 elif backend == "ollama":
-  from models.modelOllama import llm
+  from llm_ollama import llm
 else:
   raise ValueError(f"Unknown backend: {backend}")
 
 import gradio as gr
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
-prompt = PromptTemplate.from_template("You are a helpful assistant that answers the following question: {messages}")
+DEFAULT_SYSTEM_PROMPT = """\
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+If a question does not make any sense or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.\
+"""
+
+prompt = ChatPromptTemplate.from_messages([
+  ("system", DEFAULT_SYSTEM_PROMPT),
+  ("human", "{messages}")
+])
+
 chain = prompt | llm
 
 def partial_text_processor(partial_text, new_text):
@@ -27,14 +34,23 @@ def user(message, history):
   return "", history + [[message, ""]]
 
 def bot(history):
+  print(f"String length: {len(history[-1][0])}")
+  calTime = True
+
   partial_text = ""
-  for chunk in chain.stream({"messages": history[-1][0] }):
-    partial_text = partial_text_processor(partial_text, chunk)
-    history[-1][1] = partial_text
-    yield history
+  if backend == "cuda" or backend == "cpu":
+    for chunk in chain.stream({"messages": history[-1][0] }, **generation_kwargs):
+      partial_text = partial_text_processor(partial_text, chunk)
+      history[-1][1] = partial_text
+      yield history
+  else:
+    for chunk in chain.stream({"messages": history[-1][0] }):
+      partial_text = partial_text_processor(partial_text, chunk)
+      history[-1][1] = partial_text
+      yield history
 
 def request_cancel():
-  chain.cancel()
+  raise NotImplementedError("Cancel not supported")
 
 with gr.Blocks(
   theme=gr.themes.Citrus(),

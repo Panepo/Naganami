@@ -4,13 +4,10 @@ import os
 load_dotenv()
 backend = os.getenv("BACKEND")
 
-if backend == "openvino":
-  from models.modelOV import chat
-elif backend == "cuda" or backend == "cpu":
+if backend == "cuda" or backend == "cpu":
   raise NotImplementedError("HF not implemented")
-  from models.modelHF import llm
 elif backend == "ollama":
-  from models.modelOllama import chat
+  from llm_ollama import chat
 else:
   raise ValueError(f"Unknown backend: {backend}")
 
@@ -22,8 +19,9 @@ from langgraph.graph import END, START, StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode
 from tools.weather import get_weather
 from tools.wiki import wikipedia
+from tools.device import device_query
 
-tools = [wikipedia, get_weather]
+tools = [wikipedia, get_weather, device_query]
 tool_node = ToolNode(tools)
 formatted_tools = [tool for tool in tools]
 model_with_tools = chat.bind_tools(formatted_tools)
